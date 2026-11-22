@@ -97,3 +97,8 @@ Config.theme = {
     inkOn = '#071013',               -- text on a filled key cap (hint bar)
     alarm = '#ffa8ae',               -- danger rows
 }
+
+-- Update check at start: compares this version with the one published on GitHub and prints a line in the
+-- server console when an update is out. Needs outbound HTTP in server.jsonc ("http": "enabled": true, with
+-- "raw.githubusercontent.com" in "allowedHosts"). false = no request.
+Config.versionCheck = true

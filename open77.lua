@@ -15,6 +15,12 @@ client_scripts {
 
 -- client/modules: the service (require('client.modules.x')). init.lua + lib: the library that
 -- `require('@opx_target')` loads into the caller's VM. ui + locales: read by the service.
+-- Server side only for the update check (Config.versionCheck).
+server_scripts {
+    "config.lua",
+    "server/version.lua",
+}
+
 files {
     "client/modules/*.lua",
     "init.lua",
@@ -31,4 +37,5 @@ permissions {
     "network.events",   -- TriggerServerEvent for options declared with `serverEvent`
     "local.events",     -- onClientResourceStart / onClientResourceStop / open77:pauseKey handlers
     "session.locale",   -- Open77.session.locale (Config.locale = 'auto')
+    "http.request", -- server: Open77.http.get (update check, Config.versionCheck)
 }
