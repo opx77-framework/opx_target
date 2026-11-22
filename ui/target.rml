@@ -1,0 +1,67 @@
+<rml>
+<head>
+    <title>opx_target</title>
+    <link type="text/rcss" href="nui://open77/open77.rcss"/>
+    <!-- The service replaces this link with the themed sheet inline (client/modules/view.lua). -->
+    <link type="text/rcss" href="target.rcss"/>
+</head>
+<!-- "Scan de cible". client/modules/view.lua owns every position (left / top / right in px) and every
+     class; the document only holds the shapes and binds the "tg" model (tag, note and hint texts).
+     Back to front: the click catcher (#hit), the frame on the hovered entity, the leader line and
+     the tag it ends on, the cursor mark and its note, the links between tree levels and the levels
+     themselves (#lk2..#lkN and #lv1..#lvN, generated from Config.maxDepth in place of #levels), the
+     hint bar. -->
+<body data-model="tg">
+<div id="root">
+
+    <div id="hit"></div>
+    <!-- 100 dp reference: its measured width gives the px per dp of this screen -->
+    <div id="dpref"></div>
+
+    <!-- the hovered entity, framed by its projected mesh bounds: four brackets -->
+    <div id="frame">
+        <path class="fc tl" view-box="0 0 14 14" d="M1 13 V1 H13"/>
+        <path class="fc tr" view-box="0 0 14 14" d="M1 1 H13 V13"/>
+        <path class="fc bl" view-box="0 0 14 14" d="M13 13 H1 V1"/>
+        <path class="fc br" view-box="0 0 14 14" d="M13 1 V13 H1"/>
+    </div>
+
+    <!-- the callout: an angled leader from the frame's side to the tag (shape written by view.lua, px) -->
+    <path id="lead" view-box="0 0 10 10" preserve-aspect="none" d="M0 5 L10 5"/>
+
+    <!-- what is targeted: KIND · #id · distance, on a diamond the menu tree drops from -->
+    <div id="tag">
+        <div class="dia dia-l"></div>
+        <span class="tag-kind">{{tagKind}}</span>
+        <span class="tag-sep t-id">·</span>
+        <span class="tag-id t-id">{{tagId}}</span>
+        <span class="tag-sep t-dist">·</span>
+        <span class="tag-dist t-dist">{{tagDist}}</span>
+        <div class="dia dia-r"></div>
+    </div>
+
+    <!-- the cursor mark: a thin gapped cross and a dot -->
+    <div id="cursor">
+        <div class="ck n"></div>
+        <div class="ck s"></div>
+        <div class="ck w"></div>
+        <div class="ck e"></div>
+        <div class="cdot"></div>
+    </div>
+
+    <!-- "no target" and the short failure notes, beside the cursor -->
+    <div id="note">
+        <div class="note-tick"></div>
+        <span class="note-text">{{note}}</span>
+    </div>
+
+    <div id="levels"></div>
+
+    <div id="hintbar">
+        <div class="keycap"><span>{{key}}</span></div>
+        <span class="hint-text">{{hint}}</span>
+    </div>
+
+</div>
+</body>
+</rml>

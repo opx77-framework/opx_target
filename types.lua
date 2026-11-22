@@ -1,0 +1,124 @@
+---@meta
+
+---@alias OpxTargetKind 'player'|'self'|'npc'|'vehicle'|'door'|'prop'|'device'|'item'|'object'|'world'|'sky'
+---@alias OpxTargetSet 'player'|'self'|'npc'|'vehicle'|'door'|'prop'|'world'|'sky'|'global'
+-- Icon names (client/modules/icons.lua), opx_menu's aliases included (user, car, settings... from 'user' on).
+---@alias OpxTargetIcon 'dot'|'hand'|'person'|'vehicle'|'door'|'lock'|'unlock'|'key'|'info'|'search'|'eye'|'chat'|'box'|'heart'|'money'|'phone'|'gear'|'tool'|'location'|'arrow'|'camera'|'star'|'music'|'copy'|'warning'|'trash'|'group'|'mail'|'bag'|'medical'|'card'|'chip'|'gun'|'bolt'|'shield'|'map'|'home'|'flag'|'clock'|'list'|'edit'|'plus'|'minus'|'check'|'close'|'back'|'refresh'|'power'|'exit'|'next'|'user'|'users'|'people'|'car'|'settings'|'cog'|'wrench'|'repair'|'pin'|'marker'|'gps'|'cash'|'wallet'|'id'|'health'|'weapon'|'hack'|'cyberware'|'message'|'inventory'|'shop'|'delete'|'alert'|'pencil'|'add'|'remove'|'ok'|'cancel'|'x'|'logout'|'time'|'favorite'|'previous'
+
+---@class OpxVec3
+---@field x number
+---@field y number
+---@field z number
+
+---@class OpxTargetSelector One field only.
+---@field playerId? integer
+---@field vehicleId? integer
+---@field npcId? integer
+---@field propId? string decimal string
+---@field engineEntity? string decimal string
+
+---@class OpxTargetEntity
+---@field kind OpxTargetKind
+---@field playerId? integer canonical network id of a player (also for 'self')
+---@field npcId? integer
+---@field vehicleId? integer
+---@field propId? string decimal string
+---@field engineEntity? string this client's engine id, decimal string (never tonumber it)
+---@field entity? string this client's Open77 local entity handle
+---@field model? string record (Character.*, Vehicle.*) when known
+---@field className? string
+---@field name? string
+---@field networked boolean
+---@field isLocalPlayer boolean
+---@field position OpxVec3 the entity's position when known, else the hit point (sky: end of the ray)
+---@field distance? number player to hit, metres (nil for the sky)
+
+---@class OpxTargetContext
+---@field kind OpxTargetKind
+---@field target OpxTargetEntity
+---@field hit? { position: OpxVec3, normal?: OpxVec3, material?: string, source?: string } nil for the sky
+---@field distance? number player to hit, metres (nil for the sky)
+---@field origin OpxVec3 camera ray origin
+---@field direction OpxVec3 unit ray direction (what a sky option uses)
+---@field screen { x: number, y: number } normalized point the menu was opened at
+---@field option { name: string, path: string, id: integer, data?: table } the option being checked / run
+
+---@class OpxTargetOption
+---@field name? string Identifier passed back in ctx.option.name (default 'option_<path>').
+---@field label string Up to 80 characters (a separator: optional group label).
+---@field icon? OpxTargetIcon
+---@field description? string Footer text while the row is focused (180 max).
+---@field group? string Small header above consecutive rows of the same group.
+---@field separator? boolean A thin line (or a group header when it has a label) instead of a row.
+---@field danger? boolean Drawn in the alarm colour. Not an authorization.
+---@field order? integer -1000..1000, lower first (default 0).
+---@field distance? number Max player-to-target metres (default Config.defaultDistance; children inherit).
+---@field disabled? boolean|string|fun(ctx: OpxTargetContext): boolean|string|nil, string? Greyed row; a string is the reason. A function returns true (+ reason) or a reason string. Must not yield.
+---@field canInteract? fun(ctx: OpxTargetContext): boolean Hidden unless truthy. Client UX only. Must not yield.
+---@field onSelect? fun(ctx: OpxTargetContext) Runs in its own thread after the menu released the input (may yield).
+---@field event? string Local event raised in YOUR resource's VM with ctx.
+---@field serverEvent? string TriggerServerEvent(name, targetId, info), targetId = playerId/vehicleId/npcId/propId or nil, info = { kind, option, model, position, distance, direction, data } (sky: no position, the ray's unit direction instead).
+---@field data? table Static JSON-like data, copied to ctx.option.data.
+---@field children? OpxTargetOption[] Submenu (opens on hover / Right). Up to Config.maxDepth levels.
+
+---@class OpxTargetLib
+---@field addPlayer fun(options: OpxTargetOption|OpxTargetOption[]): integer|nil, string|nil
+---@field addSelf fun(options: OpxTargetOption|OpxTargetOption[]): integer|nil, string|nil
+---@field addNpc fun(options: OpxTargetOption|OpxTargetOption[]): integer|nil, string|nil
+---@field addVehicle fun(options: OpxTargetOption|OpxTargetOption[]): integer|nil, string|nil
+---@field addDoor fun(options: OpxTargetOption|OpxTargetOption[]): integer|nil, string|nil
+---@field addProp fun(options: OpxTargetOption|OpxTargetOption[]): integer|nil, string|nil prop, object, item, device
+---@field addWorld fun(options: OpxTargetOption|OpxTargetOption[]): integer|nil, string|nil surfaces with no entity
+---@field addSky fun(options: OpxTargetOption|OpxTargetOption[]): integer|nil, string|nil a direction, not a place
+---@field addGlobal fun(options: OpxTargetOption|OpxTargetOption[]): integer|nil, string|nil every hit, not sky / self
+---@field add fun(kinds: OpxTargetKind|OpxTargetSet|OpxTargetKind[], options: OpxTargetOption|OpxTargetOption[]): integer|nil, string|nil
+---@field addModel fun(models: string|string[], options: OpxTargetOption|OpxTargetOption[]): integer|nil, string|nil
+---@field addEntity fun(selectors: OpxTargetSelector|OpxTargetSelector[], options: OpxTargetOption|OpxTargetOption[]): integer|nil, string|nil
+---@field remove fun(id: integer): boolean
+---@field removeAll fun()
+---@field setEnabled fun(value: boolean): boolean, string|nil false keeps targeting off until true or this resource stops (remembered across opx_target restarts)
+---@field isEnabled fun(): boolean
+---@field getDisabledBy fun(): string[] resources holding targeting off (1.1.0)
+---@field isOpen fun(): boolean aiming (key held)
+---@field isMenuOpen fun(): boolean
+---@field close fun()
+---@field getVersion fun(): string|nil running service version, nil when opx_target is not running (1.1.0)
+
+-- Option rules: a row needs onSelect, event, serverEvent or children (a parent whose children are all
+-- hidden is hidden too); onSelect, event and serverEvent may be combined and all run. Limits: name
+-- [%w_.:-] 64 max, label 80 (separator/group 40), disabled reason 80, data 4 levels / about 2 KiB,
+-- 32 options per list, Config.limits per resource / per registration, Config.maxRows rows shown per level.
+-- distance 0.1..Config.maxDistance (the sky ignores it). Unknown icon names draw 'dot'.
+-- canInteract / function disabled run when the menu is built (shared Config.predicateBudgetMs) and again
+-- just before the chosen option runs; an error hides that option and is logged.
+-- addModel / addEntity match every kind but the sky; a selector may name an entity that does not exist yet.
+-- ctx: engineEntity / entity are local to this client: send playerId / vehicleId / npcId / propId to the
+-- server. propId / engineEntity are decimal strings, never tonumber them. ctx is a copy.
+-- Security: everything here is client UX; a server handler validates source, target, bucket, distance,
+-- life state, cooldown and permission itself.
+-- Replacement: require('@name') only loads a declared dependency, so a replacement ships as `opx_target`
+-- or consumers change their dependency line; exports-only consumers need no change if export names stay.
+-- The eye key must be readable by Open77.input.isDown (letters, digits, F-keys, named keys, mouse/pad);
+-- otherwise the eye never opens and F8 logs `key "..." cannot be read as held`.
+
+-- Reasons an add* call answers with `nil, reason` (`<path>` is the option's place, '1' or '2.1'):
+--   invalid_options, invalid_option:<path>, option_limit, too_deep:<path>, option_without_action:<path>,
+--   invalid_label|name|description|group|icon|danger|order|distance|disabled|server_event|data:<path>,
+--   invalid_canInteract|disabledWhen|onSelect:<path> (exports only: not an export name),
+--   invalid_kinds, invalid_models, invalid_entities, invalid_filter, registration_limit,
+--   export_call_required (called from opx_target itself / no caller).
+-- remove(id) -> false, 'not_found' | 'not_owner'.   setEnabled -> false, 'expected_boolean' (exports).
+-- Library only: while opx_target is not running yet, add* still returns an id and sends it once the
+-- service answers (a later refusal is logged in the F8 console with its reason).
+
+-- Client exports of opx_target (Open77.exports.call('opx_target', name, ...):await() or callSync).
+-- Exports-only options are the same as OpxTargetOption except callbacks are NAMES of your own client
+-- exports: onSelect = 'myExport' (ctx) (may yield), canInteract = 'myExport' (ctx) -> must return true
+-- to show, disabledWhen = 'myExport' (ctx) -> boolean, reason?. canInteract / disabledWhen run through
+-- callSync: they must not yield. `event` is library-only (exports-only callers use onSelect).
+--   addPlayer(options) addSelf addNpc addVehicle addDoor addProp addWorld addSky addGlobal -> id | nil, reason
+--   add(kinds, options) addModel(models, options) addEntity(selectors, options)           -> id | nil, reason
+--   remove(id) -> boolean, reason?    removeAll() -> true    (only the caller's registrations)
+--   setEnabled(boolean) -> boolean    isEnabled() isOpen() isMenuOpen() -> boolean
+--   getDisabledBy() -> string[]        close() -> true      getVersion() -> '1.1.0'
+-- Used by the library: LibAdd(spec, options, ref). The library publishes `opx_target_dispatch` in its caller.

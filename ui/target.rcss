@@ -1,0 +1,267 @@
+/*
+ * opx_target - "Scan de cible", in the "biometric scan" family of opx_character / opx_creator.
+ * Tokens: Config.theme swaps each value below everywhere in this sheet, alpha variants included
+ * (#4fe3ff59 follows holo). RCSS has no variables.
+ *   @token holo     #4fe3ff
+ *   @token accent   #ff3b47
+ *   @token text     #e9fbff
+ *   @token textDim  #86a9b5
+ *   @token panel    #031117cc
+ *   @token inkOn    #071013
+ *   @token alarm    #ffa8ae
+ * Fonts: Chakra Petch (caps labels), Rajdhani (rows), Roboto Mono (numbers).
+ *
+ * Aim: a small cursor mark (#cursor), brackets fitted to the hovered entity (#frame, drawn again on
+ * every new target with trim-end), a leader line (#lead) from the frame's side to the tag (#tag).
+ * Menu: a tree that drops from the tag's diamond. Each item of a level draws its own piece of the trunk
+ * in its left gutter (.cn: .cn-v the trunk, .cn-h the branch); a submenu level hangs from a horizontal
+ * link (#lkN) leaving its parent row. .lv.mir mirrors a level (trunk on the right) when it opens leftward.
+ * Sizes the Lua places by (client/modules/view.lua, keep in step): .lv-head 12dp, .row 30dp, .sep 10dp,
+ * .grp 22dp, .lv-desc 34dp, gutter 22dp with the trunk at 8dp, #tag 18dp tall, .dia 8dp.
+ * Backgrounds are drawn on the elements themselves: an absolute layer inside an auto-height box gets no
+ * height (RmlUi). No text-transform: caps come upper-cased from Lua (UTF-8 aware).
+ * Widths, the tilt and its hinge (the trunk) are a stylesheet layer written from Config (view.lua 'sizes').
+ * #root.calm (Config.reducedMotion or the player's nui.reducedmotion) stops the drawing motion.
+ */
+
+body, #root { width: 100%; height: 100%; pointer-events: none; }
+#root { color: #e9fbff; font-family: Rajdhani; font-size: 16dp; }
+
+/* the whole screen takes the clicks while aiming */
+#hit { position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: auto; cursor: default; }
+#dpref { position: absolute; left: 0; top: 0; width: 100dp; height: 100dp; opacity: 0; pointer-events: none; }
+
+#frame, #frame div, #frame path, #lead, #tag, #tag div, #tag span, #cursor, #cursor div, #note, #note div, #note span,
+.lk { pointer-events: none; }
+
+@keyframes draw-a { from { trim-end: 0; } to { trim-end: 1; } }
+@keyframes draw-b { from { trim-end: 0; } to { trim-end: 1; } }
+
+/* ---- frame on the hovered entity ---- */
+
+#frame { position: absolute; left: 0; top: 0; width: 0; height: 0; display: none; }
+#frame.on { display: block; }
+
+.fc {
+    position: absolute; width: 14dp; height: 14dp;
+    fill: transparent; stroke: #86a9b5cc; stroke-width: 1.6dp; stroke-linecap: square; trim-end: 1;
+}
+.fc.tl { left: 0; top: 0; }
+.fc.tr { right: 0; top: 0; }
+.fc.bl { left: 0; bottom: 0; }
+.fc.br { right: 0; bottom: 0; }
+#frame.hot .fc { stroke: #4fe3ff; filter: glow(4dp #4fe3ff 0.55); }
+#frame.lock .fc { stroke: #ff3b47; filter: glow(5dp #ff3b47 0.6); }
+
+/* drawn again on every new target and on lock (view.lua flips draw-a / draw-b) */
+#root.draw-a .fc { animation: 0.42s cubic-out draw-a; }
+#root.draw-b .fc { animation: 0.42s cubic-out draw-b; }
+#root.draw-a #lead { animation: 0.36s cubic-out draw-a; }
+#root.draw-b #lead { animation: 0.36s cubic-out draw-b; }
+
+/* ---- callout: leader and tag ---- */
+
+#lead {
+    position: absolute; left: 0; top: 0; width: 10dp; height: 10dp; display: none;
+    fill: transparent; stroke: #86a9b5b3; stroke-width: 1.2dp; stroke-linejoin: miter; trim-end: 1;
+}
+#lead.on { display: block; }
+#lead.hot { stroke: #4fe3ffcc; }
+#lead.lock { stroke: #4fe3ff; }
+
+#tag {
+    position: absolute; left: 0; top: 0; height: 18dp; display: none;
+    flex-direction: row; align-items: center; white-space: nowrap;
+}
+#tag.on { display: flex; }
+
+.dia {
+    width: 8dp; height: 8dp; box-sizing: border-box; flex-shrink: 0; transform: rotate(45deg);
+    border: 1dp #86a9b5; background-color: #86a9b500;
+}
+.dia-l { margin-right: 9dp; }
+.dia-r { margin-left: 9dp; display: none; }
+#tag.left .dia-l { display: none; }
+#tag.left .dia-r { display: block; }
+#tag.hot .dia { border-color: #4fe3ff; background-color: #4fe3ff; }
+#tag.lock .dia { border-color: #ff3b47; background-color: #ff3b47; filter: glow(5dp #ff3b47 0.7); }
+
+.tag-kind {
+    flex-shrink: 0; font-family: "Chakra Petch"; font-size: 12dp; line-height: 18dp; letter-spacing: 3dp;
+    color: #86a9b5; font-effect: shadow(0dp 1dp #000000);
+}
+#tag.hot .tag-kind { color: #4fe3ff; }
+.tag-sep {
+    flex-shrink: 0; margin: 0dp 7dp 0dp 4dp; font-family: "Roboto Mono"; font-size: 11dp; line-height: 18dp;
+    color: #86a9b580; font-effect: shadow(0dp 1dp #000000cc);
+}
+.tag-id, .tag-dist {
+    flex-shrink: 0; font-family: "Roboto Mono"; font-size: 11dp; line-height: 18dp;
+    font-effect: shadow(0dp 1dp #000000);
+}
+.tag-id { color: #86a9b5; }
+.tag-dist { color: #e9fbff; }
+#tag.no-id .t-id, #tag.no-dist .t-dist { display: none; }
+
+/* ---- cursor mark ---- */
+
+#cursor {
+    position: absolute; left: 0; top: 0; width: 20dp; height: 20dp; margin-left: -10dp; margin-top: -10dp;
+    display: none;
+}
+#cursor.on { display: block; }
+.ck { position: absolute; background-color: #86a9b5cc; box-shadow: #00000099 0dp 0dp 2dp 0dp; }
+.ck.n { left: 9.5dp; top: 0dp; width: 1dp; height: 5dp; }
+.ck.s { left: 9.5dp; bottom: 0dp; width: 1dp; height: 5dp; }
+.ck.w { left: 0dp; top: 9.5dp; width: 5dp; height: 1dp; }
+.ck.e { right: 0dp; top: 9.5dp; width: 5dp; height: 1dp; }
+.cdot { position: absolute; left: 9dp; top: 9dp; width: 2dp; height: 2dp; background-color: #e9fbffcc; box-shadow: #00000099 0dp 0dp 2dp 0dp; }
+#cursor.hot .ck { background-color: #4fe3ff; }
+#cursor.lock .ck, #cursor.miss .ck { background-color: #ff3b47; }
+#cursor.lock .cdot { background-color: #ff3b47; }
+
+/* ---- note beside the cursor ---- */
+
+#note {
+    position: absolute; left: 0; top: 0; display: none; flex-direction: row; align-items: center;
+    white-space: nowrap; opacity: 0.85;
+}
+#note.on { display: flex; }
+#note.left { flex-direction: row-reverse; }
+.note-tick { width: 6dp; height: 1dp; flex-shrink: 0; margin-right: 6dp; background-color: #86a9b5; }
+#note.left .note-tick { margin-right: 0dp; margin-left: 6dp; }
+.note-text {
+    flex-shrink: 0; font-family: "Chakra Petch"; font-size: 11dp; line-height: 14dp; letter-spacing: 3dp;
+    color: #86a9b5; font-effect: shadow(0dp 1dp #000000cc);
+}
+#note.flash { opacity: 1; }
+#note.flash .note-tick { background-color: #ff3b47; }
+#note.flash .note-text { color: #ffa8ae; }
+
+/* ---- the tree ---- */
+
+/* link from a parent row to the trunk of the level it opened */
+.lk { position: absolute; left: 0; top: 0; width: 0; height: 1dp; display: none; background-color: #ff3b47b3; }
+.lk.on { display: block; }
+
+.lv { position: absolute; left: 0; top: 0; display: none; flex-direction: column; pointer-events: auto; }
+.lv.on { display: flex; }
+
+/* the trunk from the tag's diamond to the first branch (root level only) */
+.lv-head { height: 12dp; flex-shrink: 0; display: none; flex-direction: row; }
+#lv1 .lv-head { display: flex; }
+.lv.mir .lv-head { flex-direction: row-reverse; }
+.lv-rows { display: block; }
+
+.it { display: flex; flex-direction: row; }
+.lv.mir .it { flex-direction: row-reverse; }
+
+.cn { position: relative; width: 22dp; flex-shrink: 0; align-self: stretch; }
+.cn-v { position: absolute; left: 7.5dp; top: 0%; bottom: 0%; width: 1dp; background-color: #4fe3ff8c; }
+.cn-h { position: absolute; left: 7.5dp; top: 50%; width: 14.5dp; height: 1dp; margin-top: -0.5dp; background-color: #4fe3ff8c; }
+.lv.mir .cn-v, .lv.mir .cn-h { left: auto; right: 7.5dp; }
+.lv-head .cn { height: 12dp; }
+/* └ on the last item; ┌ on the first item of a submenu (its link comes in from the side) */
+.it.last .cn-v { bottom: 50%; }
+.lv.sub .it.first .cn-v { top: 50%; }
+.lv.sub .it.first.last .cn-v { display: none; }
+
+.row { height: 30dp; align-items: center; cursor: pointer; }
+.rb {
+    flex: 1 1 0dp; height: 26dp; display: flex; flex-direction: row; align-items: center;
+    padding: 0dp 10dp 0dp 8dp;
+    background-color: #031117cc;
+    border-left: 2dp #4fe3ff00;
+    transition: border-color 0.1s cubic-out;
+}
+.lv.mir .rb { flex-direction: row-reverse; padding: 0dp 8dp 0dp 10dp; border-left-width: 0dp; border-right: 2dp #4fe3ff00; }
+
+.rb .ic { position: relative; width: 15dp; height: 15dp; flex-shrink: 0; margin-right: 9dp; }
+.lv.mir .rb .ic { margin-right: 0dp; margin-left: 9dp; }
+.rb .ic path {
+    position: absolute; left: 0; top: 0; width: 15dp; height: 15dp;
+    fill: transparent; stroke: #4fe3ff99; stroke-width: 1.5dp; stroke-linecap: round; stroke-linejoin: round;
+}
+.rb .lb {
+    flex: 1 1 0dp; font-size: 16dp; line-height: 26dp; letter-spacing: 1.5dp;
+    color: #e9fbff; white-space: nowrap; overflow: hidden;
+}
+.lv.mir .rb .lb { text-align: right; }
+.rb .why {
+    flex-shrink: 0; margin-left: 8dp; padding-left: 7dp; border-left: 1dp #86a9b54d;
+    font-family: "Roboto Mono"; font-size: 10dp; color: #86a9b5; white-space: nowrap;
+}
+.lv.mir .rb .why { margin-left: 0dp; margin-right: 8dp; padding-left: 0dp; padding-right: 7dp; border-left-width: 0dp; border-right: 1dp #86a9b54d; }
+.rb .chev { position: relative; width: 12dp; height: 12dp; flex-shrink: 0; margin-left: 6dp; }
+.lv.mir .rb .chev { margin-left: 0dp; margin-right: 6dp; transform: rotate(180deg); }
+.rb .chev path {
+    position: absolute; left: 0; top: 0; width: 12dp; height: 12dp;
+    fill: transparent; stroke: #4fe3ffb3; stroke-width: 1.8dp; stroke-linecap: square; stroke-linejoin: miter;
+}
+
+/* hovered / focused: OPX red bar, gradient and glow; the branch lights up */
+.row.focus .rb {
+    border-left-color: #ff3b47;
+    decorator: linear-gradient(90deg, #ff3b4766, #ff3b470a);
+    box-shadow: #ff3b4733 0dp 0dp 12dp 0dp;
+}
+.lv.mir .row.focus .rb { border-right-color: #ff3b47; decorator: linear-gradient(270deg, #ff3b4766, #ff3b470a); }
+.row.focus .lb { filter: glow(4dp #ff3b47 0.35); }
+.row.focus .ic path, .row.focus .chev path { stroke: #ff3b47; }
+.row.focus .cn-h, .row.open .cn-h { background-color: #ff3b47; }
+/* the row whose submenu is open */
+.row.open .rb { border-left-color: #ff3b47; decorator: linear-gradient(90deg, #ff3b4738, #ff3b4705); }
+.lv.mir .row.open .rb { border-right-color: #ff3b47; decorator: linear-gradient(270deg, #ff3b4738, #ff3b4705); }
+.row.open .chev path { stroke: #ff3b47; }
+
+.row.danger .lb { color: #ffa8ae; }
+.row.danger .ic path { stroke: #ffa8aecc; }
+
+.row.off { cursor: default; }
+.row.off .lb { color: #86a9b58c; }
+.row.off .ic path, .row.off .chev path { stroke: #86a9b566; }
+.row.off.focus .rb { decorator: none; box-shadow: none; border-left-color: #86a9b5; }
+.lv.mir .row.off.focus .rb { border-right-color: #86a9b5; }
+.row.off.focus .lb { filter: none; }
+.row.off.focus .why { color: #e9fbff; }
+.row.off.focus .cn-h { background-color: #86a9b5; }
+
+.sep { height: 10dp; align-items: center; }
+.sep-line {
+    flex: 1 1 0dp; height: 1dp; margin: 0dp 6dp 0dp 4dp;
+    decorator: repeating-linear-gradient(90deg, #4fe3ff40 0dp, #4fe3ff40 2dp, #4fe3ff00 2dp, #4fe3ff00 6dp);
+}
+.grp { height: 22dp; align-items: flex-end; }
+.grp span {
+    flex-shrink: 0; padding: 0dp 4dp 4dp 4dp; font-family: "Chakra Petch"; font-size: 10dp; line-height: 12dp;
+    letter-spacing: 3dp; color: #4fe3ffb3; white-space: nowrap; font-effect: shadow(0dp 1dp #000000);
+}
+
+/* the focused row's description, quoted under the tree */
+.lv-desc { display: none; height: 34dp; margin: 0dp 0dp 0dp 22dp; padding: 6dp 4dp 0dp 4dp; overflow: hidden; }
+.lv.mir .lv-desc { margin: 0dp 22dp 0dp 0dp; text-align: right; }
+.lv.has-desc .lv-desc { display: block; }
+.lv-desc span { font-size: 14dp; line-height: 14dp; color: #86a9b5; font-effect: shadow(0dp 1dp #000000); }
+
+/* ---- hint bar ---- */
+
+#hintbar {
+    position: absolute; left: 0; right: 0; bottom: 72dp; display: none;
+    flex-direction: row; justify-content: center; align-items: center; pointer-events: none;
+}
+#hintbar.on { display: flex; }
+.keycap {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    min-width: 26dp; height: 22dp; padding: 0dp 7dp; margin-right: 12dp;
+    decorator: fx(chamfer-solid 4 0 0 0 #4fe3ff);
+}
+.keycap span { font-family: "Chakra Petch"; font-size: 12dp; font-weight: bold; letter-spacing: 1dp; color: #071013; }
+.hint-text {
+    flex-shrink: 0; font-family: "Chakra Petch"; font-size: 11dp; letter-spacing: 2dp; color: #86a9b5;
+    white-space: nowrap; font-effect: shadow(0dp 1dp #000000);
+}
+
+/* ---- calm motion ---- */
+
+#root.calm .fc, #root.calm #lead { animation: none; }
+#root.calm .rb { transition: none; }
